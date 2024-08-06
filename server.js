@@ -1,10 +1,12 @@
 const express = require('express');
 const bodyParser = require('body-parser');
+const cors = require('cors');
 const { Pool } = require('pg');
 
 const app = express();
 const port = 3001;
 
+// Database connection pool
 const pool = new Pool({
   user: 'postgres',
   host: 'localhost',
@@ -13,8 +15,13 @@ const pool = new Pool({
   port: 5432,
 });
 
+// Middleware
+app.use(cors({
+  origin: 'http://localhost:3000'  // Allow requests from this origin
+}));
 app.use(bodyParser.json());
 
+// Routes
 app.get('/plans', async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM plans');
@@ -54,6 +61,7 @@ app.put('/plans/:id', async (req, res) => {
   }
 });
 
+// Start server
 app.listen(port, () => {
-  console.log(`Server running on port ${port}`);
+  console.log(`Server running on http://localhost:${port}`);
 });
