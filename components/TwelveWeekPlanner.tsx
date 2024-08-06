@@ -1,70 +1,87 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardHeader, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Trash2 } from 'lucide-react';
 import ProgressSummaryTable from './ProgressSummaryTable';
-import debounce from 'lodash.debounce';
 
 const weekdays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
-const TwelveWeekPlanner = ({ planId, planData, onUpdatePlan }) => {
+interface Day {
+  name: string;
+  items: { text: string; completed: boolean }[];
+}
+
+interface Week {
+  goal: string;
+  days: Day[];
+}
+
+interface PlanData {
+  primaryGoal: string;
+  weeks: Week[];
+}
+
+interface TwelveWeekPlannerProps {
+  planId: number;
+  planData: PlanData;
+  onUpdatePlan: (newData: PlanData) => void;
+}
+
+const TwelveWeekPlanner: React.FC<TwelveWeekPlannerProps> = ({ planId, planData, onUpdatePlan }) => {
   const [primaryGoal, setPrimaryGoal] = useState(planData.primaryGoal || '');
-  const [weeks, setWeeks] = useState(planData.weeks || Array(12).fill().map(() => ({
+  const [weeks, setWeeks] = useState(planData.weeks || Array(12).fill({
     goal: '',
     days: weekdays.map(day => ({ name: day, items: [] }))
-  })));
+  }));
 
   useEffect(() => {
     setPrimaryGoal(planData.primaryGoal || '');
-    setWeeks(planData.weeks || Array(12).fill().map(() => ({
+    setWeeks(planData.weeks || Array(12).fill({
       goal: '',
       days: weekdays.map(day => ({ name: day, items: [] }))
-    })));
+    }));
   }, [planData]);
 
-  const debouncedUpdatePlanData = useCallback(
-    debounce((primaryGoal, weeks) => {
-      onUpdatePlan({ primaryGoal, weeks });
-    }, 300),
-    []
-  );
-
-  useEffect(() => {
-    debouncedUpdatePlanData(primaryGoal, weeks);
-    return debouncedUpdatePlanData.cancel;
-  }, [primaryGoal, weeks, debouncedUpdatePlanData]);
-
-  const handlePrimaryGoalChange = (e) => {
-    setPrimaryGoal(e.target.value);
+  const updatePlanData = () => {
+    onUpdatePlan({ primaryGoal, weeks });
   };
 
-  const handleWeekGoalChange = (weekIndex, e) => {
+  const handlePrimaryGoalChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setPrimaryGoal(e.target.value);
+    updatePlanData();
+  };
+
+  const handleWeekGoalChange = (weekIndex: number, e: React.ChangeEvent<HTMLInputElement>) => {
     const newWeeks = [...weeks];
     newWeeks[weekIndex].goal = e.target.value;
     setWeeks(newWeeks);
+    updatePlanData();
   };
 
-  const addDailyItem = (weekIndex, dayIndex, item) => {
+  const addDailyItem = (weekIndex: number, dayIndex: number, item: string) => {
     const newWeeks = [...weeks];
     newWeeks[weekIndex].days[dayIndex].items.push({ text: item, completed: false });
     setWeeks(newWeeks);
+    updatePlanData();
   };
 
-  const toggleDailyItem = (weekIndex, dayIndex, itemIndex) => {
+  const toggleDailyItem = (weekIndex: number, dayIndex: number, itemIndex: number) => {
     const newWeeks = [...weeks];
     newWeeks[weekIndex].days[dayIndex].items[itemIndex].completed = 
       !newWeeks[weekIndex].days[dayIndex].items[itemIndex].completed;
     setWeeks(newWeeks);
+    updatePlanData();
   };
 
-  const deleteDailyItem = (weekIndex, dayIndex, itemIndex) => {
+  const deleteDailyItem = (weekIndex: number, dayIndex: number, itemIndex: number) => {
     const newWeeks = [...weeks];
     newWeeks[weekIndex].days[dayIndex].items.splice(itemIndex, 1);
     setWeeks(newWeeks);
+    updatePlanData();
   };
 
   return (
@@ -117,17 +134,17 @@ const TwelveWeekPlanner = ({ planId, planData, onUpdatePlan }) => {
                   <Input
                     placeholder="Add new item"
                     onKeyPress={(e) => {
-                      if (e.key === 'Enter' && e.target.value.trim() !== '') {
-                        addDailyItem(weekIndex, dayIndex, e.target.value.trim());
-                        e.target.value = '';
+                      if (e.key === 'Enter' && e.currentTarget.value.trim() !== '') {
+                        addDailyItem(weekIndex, dayIndex, e.currentTarget.value.trim());
+                        e.currentTarget.value = '';
                       }
                     }}
                     className="mr-2"
                   />
                   <Button
-                    onClick={(e) => {
-                      const input = e.target.previousSibling;
-                      if (input.value.trim() !== '') {
+                    onClick={() => {
+                      const input = document.querySelector(`input[data-week="${weekIndex}"][data-day="${dayIndex}"]`) as HTMLInputElement;
+                      if (input && input.value.trim() !== '') {
                         addDailyItem(weekIndex, dayIndex, input.value.trim());
                         input.value = '';
                       }

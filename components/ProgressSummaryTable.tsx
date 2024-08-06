@@ -3,13 +3,27 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardHeader, CardContent } from '@/components/ui/card';
 
-const ProgressSummaryTable = ({ weeks }) => {
-  const [weeklyProgress, setWeeklyProgress] = useState([]);
-  const [overallProgress, setOverallProgress] = useState(0);
-  const [isLoading, setIsLoading] = useState(true);
+interface Day {
+  name: string;
+  items: { text: string; completed: boolean }[];
+}
+
+interface Week {
+  goal: string;
+  days: Day[];
+}
+
+interface ProgressSummaryTableProps {
+  weeks: Week[];
+}
+
+const ProgressSummaryTable: React.FC<ProgressSummaryTableProps> = ({ weeks }) => {
+  const [weeklyProgress, setWeeklyProgress] = useState<number[]>([]);
+  const [overallProgress, setOverallProgress] = useState<number>(0);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
 
   useEffect(() => {
-    const calculateWeeklyProgress = (week) => {
+    const calculateWeeklyProgress = (week: Week) => {
       const totalItems = week.days.reduce((sum, day) => sum + day.items.length, 0);
       const completedItems = week.days.reduce((sum, day) => sum + day.items.filter(item => item.completed).length, 0);
       return totalItems > 0 ? (completedItems / totalItems) * 100 : 0;

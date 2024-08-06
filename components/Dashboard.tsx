@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { PlusCircle } from 'lucide-react';
@@ -8,60 +9,76 @@ import TwelveWeekPlanner from './TwelveWeekPlanner';
 
 const weekdays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
-const Dashboard = () => {
-  const [plans, setPlans] = useState([]);
-  const [activeTab, setActiveTab] = useState('');
+interface Day {
+  name: string;
+  items: { text: string; completed: boolean }[];
+}
+
+interface Week {
+  goal: string;
+  days: Day[];
+}
+
+interface PlanData {
+  primaryGoal: string;
+  weeks: Week[];
+}
+
+interface Plan {
+  id: number;
+  name: string;
+  data: PlanData;
+}
+
+const Dashboard: React.FC = () => {
+  const [plans, setPlans] = useState<Plan[]>([]);
+  const [activeTab, setActiveTab] = useState<string>('');
 
   useEffect(() => {
-    const storedPlans = localStorage.getItem('plans');
-    if (storedPlans) {
-      const parsedPlans = JSON.parse(storedPlans);
-      setPlans(parsedPlans);
-      setActiveTab(parsedPlans[0]?.id || '');
-    } else {
-      const defaultPlan = {
-        id: '1',
-        name: 'Plan 1',
+    const fetchPlans = async () => {
+      try {
+        const response = await axios.get('http://localhost:3001/plans');
+        setPlans(response.data);
+        setActiveTab(response.data[0]?.id.toString() || '');
+      } catch (err) {
+        console.error(err);
+      }
+    };
+
+    fetchPlans();
+  }, []);
+
+  const handleAddPlan = async () => {
+    try {
+      const newPlan: Omit<Plan, 'id'> = {
+        name: `Plan ${plans.length + 1}`,
         data: {
           primaryGoal: '',
-          weeks: Array(12).fill().map(() => ({
+          weeks: Array(12).fill({}).map(() => ({
             goal: '',
-            days: weekdays.map(day => ({ name: day, items: [] }))
+            days: weekdays.map(day => ({ name: day, items: [] as { text: string; completed: boolean }[] }))
           }))
         }
       };
-      setPlans([defaultPlan]);
-      setActiveTab('1');
-      localStorage.setItem('plans', JSON.stringify([defaultPlan]));
+      const response = await axios.post('http://localhost:3001/plans', newPlan);
+      setPlans([...plans, response.data]);
+      setActiveTab(response.data.id.toString());
+    } catch (err) {
+      console.error(err);
     }
-  }, []);
-
-  useEffect(() => {
-    localStorage.setItem('plans', JSON.stringify(plans));
-    localStorage.setItem('activeTab', activeTab);
-  }, [plans, activeTab]);
-
-  const handleAddPlan = () => {
-    const newPlan = {
-      id: (plans.length + 1).toString(),
-      name: `Plan ${plans.length + 1}`,
-      data: {
-        primaryGoal: '',
-        weeks: Array(12).fill().map(() => ({
-          goal: '',
-          days: weekdays.map(day => ({ name: day, items: [] }))
-        }))
-      }
-    };
-    setPlans([...plans, newPlan]);
-    setActiveTab(newPlan.id);
   };
 
-  const handleUpdatePlan = (planId, newData) => {
-    const updatedPlans = plans.map(plan => 
-      plan.id === planId ? { ...plan, data: newData } : plan
-    );
-    setPlans(updatedPlans);
+  const handleUpdatePlan = async (planId: number, newData: PlanData) => {
+    try {
+      const updatedPlan = plans.find(plan => plan.id === planId);
+      if (updatedPlan) {
+        const updatedPlanData = { ...updatedPlan, data: newData };
+        await axios.put(`http://localhost:3001/plans/${planId}`, updatedPlanData);
+        setPlans(plans.map(plan => (plan.id === planId ? updatedPlanData : plan)));
+      }
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   return (
@@ -71,7 +88,7 @@ const Dashboard = () => {
         <div className="flex items-center mb-4">
           <TabsList>
             {plans.map((plan) => (
-              <TabsTrigger key={plan.id} value={plan.id}>
+              <TabsTrigger key={plan.id} value={plan.id.toString()}>
                 {plan.name}
               </TabsTrigger>
             ))}
@@ -82,11 +99,11 @@ const Dashboard = () => {
           </Button>
         </div>
         {plans.map((plan) => (
-          <TabsContent key={plan.id} value={plan.id}>
+          <TabsContent key={plan.id} value={plan.id.toString()}>
             <TwelveWeekPlanner 
               planId={plan.id} 
               planData={plan.data} 
-              onUpdatePlan={(newData) => handleUpdatePlan(plan.id, newData)}
+              onUpdatePlan={(newData: PlanData) => handleUpdatePlan(plan.id, newData)}
             />
           </TabsContent>
         ))}
