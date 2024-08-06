@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
+import debounce from 'lodash.debounce';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { PlusCircle } from 'lucide-react';
@@ -27,9 +28,11 @@ const Dashboard = () => {
     fetchPlans();
   }, []);
 
-  useEffect(() => {
-    localStorage.setItem('plans', JSON.stringify(plans));
-  }, [plans]);
+  // Debounced function for updating plans
+  const debouncedUpdatePlans = useCallback(debounce((updatedPlans: any[]) => {
+    setPlans(updatedPlans);
+    localStorage.setItem('plans', JSON.stringify(updatedPlans));
+  }, 500), []); // Adjust the delay 
 
   const handleAddPlan = async () => {
     const newPlan = {
@@ -45,10 +48,8 @@ const Dashboard = () => {
     };
     
     try {
-      console.log('New Plan:', newPlan);
       const response = await axios.post('http://localhost:3001/plans', newPlan);
-      console.log('Response Data:', response.data);
-      setPlans([...plans, response.data]);
+      setPlans(prevPlans => [...prevPlans, response.data]);
       setActiveTab(response.data.id.toString());
     } catch (err) {
       console.error('Error adding plan:', err);
@@ -59,7 +60,7 @@ const Dashboard = () => {
     const updatedPlans = plans.map(plan => 
       plan.id === planId ? { ...plan, data: newData } : plan
     );
-    setPlans(updatedPlans);
+    debouncedUpdatePlans(updatedPlans);
   };
 
   return (
