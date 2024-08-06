@@ -1,12 +1,13 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardHeader, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Trash2 } from 'lucide-react';
 import ProgressSummaryTable from './ProgressSummaryTable';
+import debounce from 'lodash.debounce';
 
 const weekdays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
@@ -25,27 +26,32 @@ const TwelveWeekPlanner = ({ planId, planData, onUpdatePlan }) => {
     })));
   }, [planData]);
 
-  const updatePlanData = () => {
-    onUpdatePlan({ primaryGoal, weeks });
-  };
+  const debouncedUpdatePlanData = useCallback(
+    debounce((primaryGoal, weeks) => {
+      onUpdatePlan({ primaryGoal, weeks });
+    }, 300),
+    []
+  );
+
+  useEffect(() => {
+    debouncedUpdatePlanData(primaryGoal, weeks);
+    return debouncedUpdatePlanData.cancel;
+  }, [primaryGoal, weeks, debouncedUpdatePlanData]);
 
   const handlePrimaryGoalChange = (e) => {
     setPrimaryGoal(e.target.value);
-    updatePlanData();
   };
 
   const handleWeekGoalChange = (weekIndex, e) => {
     const newWeeks = [...weeks];
     newWeeks[weekIndex].goal = e.target.value;
     setWeeks(newWeeks);
-    updatePlanData();
   };
 
   const addDailyItem = (weekIndex, dayIndex, item) => {
     const newWeeks = [...weeks];
     newWeeks[weekIndex].days[dayIndex].items.push({ text: item, completed: false });
     setWeeks(newWeeks);
-    updatePlanData();
   };
 
   const toggleDailyItem = (weekIndex, dayIndex, itemIndex) => {
@@ -53,14 +59,12 @@ const TwelveWeekPlanner = ({ planId, planData, onUpdatePlan }) => {
     newWeeks[weekIndex].days[dayIndex].items[itemIndex].completed = 
       !newWeeks[weekIndex].days[dayIndex].items[itemIndex].completed;
     setWeeks(newWeeks);
-    updatePlanData();
   };
 
   const deleteDailyItem = (weekIndex, dayIndex, itemIndex) => {
     const newWeeks = [...weeks];
     newWeeks[weekIndex].days[dayIndex].items.splice(itemIndex, 1);
     setWeeks(newWeeks);
-    updatePlanData();
   };
 
   return (

@@ -38,7 +38,8 @@ const Dashboard = () => {
 
   useEffect(() => {
     localStorage.setItem('plans', JSON.stringify(plans));
-  }, [plans]);
+    localStorage.setItem('activeTab', activeTab);
+  }, [plans, activeTab]);
 
   const handleAddPlan = () => {
     const newPlan = {
