@@ -37,6 +37,7 @@ const TwelveWeekPlanner: React.FC<TwelveWeekPlannerProps> = ({ planId, planData,
     goal: '',
     days: weekdays.map(day => ({ name: day, items: [] }))
   }));
+  const [newItems, setNewItems] = useState<{ [key: string]: string }>({});
 
   useEffect(() => {
     setPrimaryGoal(planData.primaryGoal || '');
@@ -66,6 +67,7 @@ const TwelveWeekPlanner: React.FC<TwelveWeekPlannerProps> = ({ planId, planData,
     const newWeeks = [...weeks];
     newWeeks[weekIndex].days[dayIndex].items.push({ text: item, completed: false });
     setWeeks(newWeeks);
+    setNewItems({ ...newItems, [`${weekIndex}-${dayIndex}`]: '' });
     updatePlanData();
   };
 
@@ -82,6 +84,10 @@ const TwelveWeekPlanner: React.FC<TwelveWeekPlannerProps> = ({ planId, planData,
     newWeeks[weekIndex].days[dayIndex].items.splice(itemIndex, 1);
     setWeeks(newWeeks);
     updatePlanData();
+  };
+
+  const handleNewItemChange = (weekIndex: number, dayIndex: number, value: string) => {
+    setNewItems({ ...newItems, [`${weekIndex}-${dayIndex}`]: value });
   };
 
   return (
@@ -132,21 +138,21 @@ const TwelveWeekPlanner: React.FC<TwelveWeekPlannerProps> = ({ planId, planData,
                 </ul>
                 <div className="flex mt-1">
                   <Input
+                    value={newItems[`${weekIndex}-${dayIndex}`] || ''}
                     placeholder="Add new item"
+                    onChange={(e) => handleNewItemChange(weekIndex, dayIndex, e.target.value)}
                     onKeyPress={(e) => {
                       if (e.key === 'Enter' && e.currentTarget.value.trim() !== '') {
                         addDailyItem(weekIndex, dayIndex, e.currentTarget.value.trim());
-                        e.currentTarget.value = '';
                       }
                     }}
                     className="mr-2"
                   />
                   <Button
                     onClick={() => {
-                      const input = document.querySelector(`input[data-week="${weekIndex}"][data-day="${dayIndex}"]`) as HTMLInputElement;
-                      if (input && input.value.trim() !== '') {
-                        addDailyItem(weekIndex, dayIndex, input.value.trim());
-                        input.value = '';
+                      const value = newItems[`${weekIndex}-${dayIndex}`]?.trim();
+                      if (value) {
+                        addDailyItem(weekIndex, dayIndex, value);
                       }
                     }}
                   >

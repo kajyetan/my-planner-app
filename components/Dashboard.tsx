@@ -24,15 +24,21 @@ const Dashboard = () => {
         console.error('Error fetching plans:', err);
       }
     };
-    
+
     fetchPlans();
   }, []);
 
-  // Debounced function for updating plans
-  const debouncedUpdatePlans = useCallback(debounce((updatedPlans: any[]) => {
-    setPlans(updatedPlans);
+  const savePlansToLocalStorage = useCallback(debounce((updatedPlans: any[]) => {
     localStorage.setItem('plans', JSON.stringify(updatedPlans));
-  }, 500), []); // Adjust the delay 
+  }, 500), []);
+
+  const savePlanToServer = useCallback(debounce(async (updatedPlan: any) => {
+    try {
+      await axios.put(`http://localhost:3001/plans/${updatedPlan.id}`, updatedPlan);
+    } catch (err) {
+      console.error('Error updating plan:', err);
+    }
+  }, 500), []);
 
   const handleAddPlan = async () => {
     const newPlan = {
@@ -46,10 +52,10 @@ const Dashboard = () => {
         })
       }
     };
-    
+
     try {
       const response = await axios.post('http://localhost:3001/plans', newPlan);
-      setPlans(prevPlans => [...prevPlans, response.data]);
+      setPlans([...plans, response.data]);
       setActiveTab(response.data.id.toString());
     } catch (err) {
       console.error('Error adding plan:', err);
@@ -60,7 +66,14 @@ const Dashboard = () => {
     const updatedPlans = plans.map(plan => 
       plan.id === planId ? { ...plan, data: newData } : plan
     );
-    debouncedUpdatePlans(updatedPlans);
+    setPlans(updatedPlans);
+
+    savePlansToLocalStorage(updatedPlans);
+
+    const updatedPlan = updatedPlans.find(plan => plan.id === planId);
+    if (updatedPlan) {
+      savePlanToServer(updatedPlan);
+    }
   };
 
   return (
